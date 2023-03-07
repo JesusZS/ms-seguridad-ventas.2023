@@ -5,7 +5,7 @@ import {
   Filter,
   FilterExcludingWhere,
   repository,
-  Where
+  Where,
 } from '@loopback/repository';
 import {
   del,
@@ -17,9 +17,14 @@ import {
   post,
   put,
   requestBody,
-  response
+  response,
 } from '@loopback/rest';
-import {Credenciales, Login, Usuario} from '../models';
+import {
+  Credenciales,
+  FactorDeAutenticacionPorCodigo,
+  Login,
+  Usuario,
+} from '../models';
 import {LoginRepository, UsuarioRepository} from '../repositories';
 import {SeguridadUsuarioService} from '../services';
 
@@ -30,7 +35,7 @@ export class UsuarioController {
     @service(SeguridadUsuarioService)
     public servicioSeguridad: SeguridadUsuarioService,
     @repository(LoginRepository)
-    public repositorioLogin:LoginRepository;
+    public repositorioLogin: LoginRepository,
   ) {}
 
   @post('/usuario')
@@ -167,7 +172,7 @@ export class UsuarioController {
   @post('/identificar-usuario')
   @response(200, {
     description: 'identificar un usuario por correo y clave',
-    content: {'application/json': {schema: getModelSchemaRef(Credenciales)}},
+    content: {'application/json': {schema: getModelSchemaRef(Usuario)}},
   })
   async identificarUsuario(
     @requestBody({
@@ -178,7 +183,7 @@ export class UsuarioController {
       },
     })
     credenciales: Credenciales,
-  ):Promise<Object> {
+  ): Promise<Object> {
     const usuario = await this.servicioSeguridad.identificarUsuario(
       credenciales,
     );
@@ -194,6 +199,37 @@ export class UsuarioController {
       //notificar al usuario via correo o SMS
       return usuario;
     }
-    return new HttpErrors[401]("credenciales incorrectas")
+    return new HttpErrors[401]('credenciales incorrectas');
+  }
+
+  @post('/verificar-2fa')
+  @response(200, {
+    description: 'verificar un codigo de 2fa',
+  })
+  async verificarCodigo2fa(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(FactorDeAutenticacionPorCodigo),
+        },
+      },
+    })
+    credenciales: FactorDeAutenticacionPorCodigo,
+  ): Promise<Object> {
+    const usuario = await this.servicioSeguridad.validarCodigo2fa(credenciales);
+    if (usuario) {
+      let token = this.servicioSeguridad.crearToken(usuario);
+      if (usuario) {
+        usuario.clave = '';
+        return {
+          user: usuario,
+          token: token,
+        };
+      }
+    }
+
+    return new HttpErrors[401](
+      'codigo de 2fa invalido para el usuario definido',
+    );
   }
 }
