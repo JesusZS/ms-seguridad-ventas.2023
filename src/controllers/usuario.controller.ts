@@ -29,6 +29,8 @@ import {
 import {LoginRepository, UsuarioRepository} from '../repositories';
 import {SeguridadUsuarioService} from '../services';
 
+import {ConfiguracionSeguridad} from '../config/seguridad.config';
+
 export class UsuarioController {
   constructor(
     @repository(UsuarioRepository)
@@ -76,7 +78,13 @@ export class UsuarioController {
     return this.usuarioRepository.count(where);
   }
 
-  @authenticate('auth')
+  @authenticate({
+    strategy: 'auth',
+    options: [
+      ConfiguracionSeguridad.menuUsuarioId,
+      ConfiguracionSeguridad.listarAccion,
+    ],
+  })
   @get('/usuario')
   @response(200, {
     description: 'Array of Usuario model instances',
