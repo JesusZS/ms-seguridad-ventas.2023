@@ -24,11 +24,13 @@ import {
   Credenciales,
   FactorDeAutenticacionPorCodigo,
   Login,
+  PermisosRolMenu,
   Usuario,
 } from '../models';
 import {LoginRepository, UsuarioRepository} from '../repositories';
-import {SeguridadUsuarioService} from '../services';
+import {AuthService, SeguridadUsuarioService} from '../services';
 
+import {UserProfile} from '@loopback/security';
 import {ConfiguracionSeguridad} from '../config/seguridad.config';
 
 export class UsuarioController {
@@ -39,6 +41,8 @@ export class UsuarioController {
     public servicioSeguridad: SeguridadUsuarioService,
     @repository(LoginRepository)
     public repositorioLogin: LoginRepository,
+    @service(AuthService)
+    private servicioAuth: AuthService,
   ) {}
 
   @post('/usuario')
@@ -210,6 +214,28 @@ export class UsuarioController {
       return usuario;
     }
     return new HttpErrors[401]('credenciales incorrectas');
+  }
+
+  @post('/validar-permisos')
+  @response(200, {
+    description: 'validacion de permisos de usuario para la logica de negocio',
+    content: {'application/json': {schema: getModelSchemaRef(PermisosRolMenu)}},
+  })
+  async ValidarPermisosDeUsuario(
+    @requestBody({
+      content: {
+        'application/json': {
+          schema: getModelSchemaRef(PermisosRolMenu),
+        },
+      },
+    })
+    datos: PermisosRolMenu,
+  ): Promise<UserProfile | undefined> {
+    return this.servicioAuth.VerificarPermisoDeUsuarioPoRol(
+      datos.idRol,
+      datos.idMenu,
+      datos.accion,
+    );
   }
 
   @post('/verificar-2fa')
